@@ -63,3 +63,22 @@ class SecurityLevelData(
                 context.getString(securityLevelDescription)).toHtml(flags)
     }
 }
+
+class AttestationInfoData(
+    override val title: Int,
+    override val description: Int,
+    val data: String?,
+    val tee: Boolean? = null,
+    val copyData: String? = null,
+    val monospace: Boolean = false
+) : Data() {
+    override fun getMessage(context: Context): CharSequence {
+        val id = when (tee) {
+            true -> R.string.tee_enforced_description
+            false -> R.string.sw_enforced_description
+            null -> return super.getMessage(context)
+        }
+        return "${context.getString(description)}<p>* ${context.getString(id)}"
+            .toHtml(HtmlCompat.FROM_HTML_OPTION_TRIM_WHITESPACE)
+    }
+}
