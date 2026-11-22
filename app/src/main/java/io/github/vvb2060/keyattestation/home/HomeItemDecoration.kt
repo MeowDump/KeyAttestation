@@ -3,18 +3,32 @@ package io.github.vvb2060.keyattestation.home
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Rect
-import android.graphics.drawable.Drawable
+import android.graphics.Paint
+import android.graphics.drawable.GradientDrawable
 import android.view.View
+import androidx.core.graphics.ColorUtils
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ItemDecoration
-import rikka.core.res.resolveDrawable
-import kotlin.math.roundToInt
+import io.github.vvb2060.keyattestation.R
+import rikka.core.res.resolveColor
 
 class HomeItemDecoration(context: Context) : ItemDecoration() {
 
-    private val drawable: Drawable = context.theme.resolveDrawable(rikka.material.R.attr.outlineButtonBackground)!!
-    private val cardMargin: Int = (context.resources.displayMetrics.density * 8).roundToInt()
-    private val cardPadding: Int = (context.resources.displayMetrics.density * 8).roundToInt()
+    private val outlineColor: Int = ColorUtils.setAlphaComponent(
+        context.theme.resolveColor(com.google.android.material.R.attr.colorOnSurface), 0x3D)
+    private val cardMargin: Int = context.resources.getDimensionPixelSize(R.dimen.home_card_margin)
+    private val cardPadding: Int = context.resources.getDimensionPixelSize(R.dimen.home_card_padding)
+    private val rowInset: Int = context.resources.getDimensionPixelSize(R.dimen.home_row_inset)
+    private val strokeWidth: Int = context.resources.getDimensionPixelSize(R.dimen.home_card_stroke)
+
+    private val drawable = GradientDrawable().apply {
+        cornerRadius = context.resources.getDimension(R.dimen.home_card_radius)
+        setStroke(strokeWidth, outlineColor)
+    }
+    private val dividerPaint = Paint().apply {
+        color = ColorUtils.setAlphaComponent(outlineColor, 0x24)
+        style = Paint.Style.FILL
+    }
 
     private fun hasTopMargin(@Suppress("UNUSED_PARAMETER") adapter: HomeAdapter, position: Int): Boolean {
         return position == 0
@@ -71,6 +85,16 @@ class HomeItemDecoration(context: Context) : ItemDecoration() {
 
             if (!adapter.allowFrameAt(position)) {
                 continue
+            }
+
+            if (adapter.allowDividerAfter(position)) {
+                c.drawRect(
+                    (child.left + rowInset).toFloat(),
+                    (child.bottom - strokeWidth).toFloat(),
+                    (child.right - rowInset).toFloat(),
+                    child.bottom.toFloat(),
+                    dividerPaint
+                )
             }
 
             if (invalidatedPosition) {
