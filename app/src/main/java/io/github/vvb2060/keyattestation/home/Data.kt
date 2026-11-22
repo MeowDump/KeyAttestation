@@ -70,7 +70,8 @@ class AttestationInfoData(
     val data: String?,
     val tee: Boolean? = null,
     val copyData: String? = null,
-    val monospace: Boolean = false
+    val monospace: Boolean = false,
+    val titleText: String? = null
 ) : Data() {
     override fun getMessage(context: Context): CharSequence {
         val id = when (tee) {
