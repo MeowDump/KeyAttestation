@@ -113,6 +113,14 @@ public class RootOfTrust {
 
     @Override
     public String toString() {
+        return describe(true);
+    }
+
+    public String toStringWithoutHash() {
+        return describe(false);
+    }
+
+    private String describe(boolean includeHash) {
         StringBuilder sb = new StringBuilder()
                 .append("verifiedBootKey: ")
                 .append(BaseEncoding.base16().lowerCase().encode(verifiedBootKey))
@@ -120,7 +128,7 @@ public class RootOfTrust {
                 .append(deviceLocked)
                 .append("\nverifiedBootState: ")
                 .append(verifiedBootStateToString(verifiedBootState));
-        if (verifiedBootHash != null) {
+        if (includeHash && verifiedBootHash != null) {
             sb.append("\nverifiedBootHash: ")
                     .append(BaseEncoding.base16().lowerCase().encode(verifiedBootHash));
         }
