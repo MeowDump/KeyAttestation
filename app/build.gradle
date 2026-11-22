@@ -46,12 +46,13 @@ android {
     }
 
     signingConfigs {
-        debug {
-            if (properties.getProperty("storeFile") != null) {
-                storeFile file(properties.getProperty("storeFile"))
-                storePassword properties.getProperty("storePassword")
-                keyAlias properties.getProperty("keyAlias")
-                keyPassword properties.getProperty("keyPassword")
+        meow {
+            def keystorePath = System.getenv("KEYSTORE_FILE")
+            if (keystorePath != null && file(keystorePath).exists()) {
+                storeFile file(keystorePath)
+                storePassword System.getenv("KEYSTORE_PASSWORD")
+                keyAlias System.getenv("KEY_ALIAS")
+                keyPassword System.getenv("KEY_PASSWORD")
             }
         }
     }
@@ -59,13 +60,20 @@ android {
     buildTypes {
         debug {
             versionNameSuffix '-debug'
+            if (System.getenv("KEYSTORE_FILE") != null && file(System.getenv("KEYSTORE_FILE")).exists()) {
+                signingConfig signingConfigs.meow
+            }
         }
 
         release {
             minifyEnabled true
             shrinkResources true
             vcsInfo.include false
-            signingConfig signingConfigs.debug
+            if (System.getenv("KEYSTORE_FILE") != null && file(System.getenv("KEYSTORE_FILE")).exists()) {
+                signingConfig signingConfigs.meow
+            } else {
+                signingConfig signingConfigs.debug
+            }
             proguardFiles 'proguard-rules.pro'
         }
     }
