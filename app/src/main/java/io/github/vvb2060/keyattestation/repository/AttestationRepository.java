@@ -196,6 +196,7 @@ public class AttestationRepository {
         } catch (Exception e) {
             var cause = e instanceof AttestationException ? e.getCause() : e;
             Log.w(AppApplication.TAG, "Do attestation error.", cause);
+            currentCerts.clear();
 
             if (e instanceof AttestationException) {
                 return Resource.Companion.error(e, null);
@@ -415,6 +416,7 @@ public class AttestationRepository {
         } catch (Exception e) {
             var cause = e instanceof AttestationException ? e.getCause() : e;
             Log.w(AppApplication.TAG, "Load attestation error.", cause);
+            currentCerts.clear();
 
             if (e instanceof AttestationException) {
                 return Resource.Companion.error((AttestationException) e, null);
