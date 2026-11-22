@@ -395,4 +395,22 @@
     <string name="knox_record_hash_description"><![CDATA[
     a SHA256 digest of the TA requesting the integrity status data from ICCC.
     ]]></string>
+    <string name="attestation_info">Attestation summary</string>
+    <string name="attestation_info_description"><![CDATA[
+    The most relevant values of the attestation at a glance. They are read from the attestation certificate and its extension; tap an item for details.
+    ]]></string>
+    <string name="info_validity">Validity period</string>
+    <string name="info_validity_description"><![CDATA[
+    The period during which the attestation certificate is valid, taken from the validity field of the certificate that carries this attestation.
+    ]]></string>
+    <string name="info_patch_levels">Patch levels</string>
+    <string name="info_patch_levels_description"><![CDATA[
+    The security patch levels reported by the attestation for the operating system, the vendor image and the boot image.
+    ]]></string>
+    <string name="info_verified_boot_hash">Verified boot hash</string>
+    <string name="info_verified_boot_hash_description"><![CDATA[
+    A digest of all data protected by Verified Boot.
+    ]]></string>
+    <string name="info_not_available">Not available</string>
+    <string name="info_hidden_secret_mode">Hidden (Secret Mode is on)</string>
 </resources>
