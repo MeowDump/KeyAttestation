@@ -120,6 +120,39 @@ class HomeAdapter(listener: Listener) : IdBasedRecyclerViewAdapter() {
         }
     }
 
+    private fun displayedCerts(certsList: List<CertificateInfo>?): List<CertificateInfo> {
+        if (certsList.isNullOrEmpty()) return emptyList()
+        val containsEc = certsList.any { it.cert?.publicKey?.algorithm?.equals("EC", ignoreCase = true) == true || it.cert?.publicKey?.algorithm?.equals("ECDSA", ignoreCase = true) == true }
+
+        // Track unique serial numbers to block duplicates
+        val seenSerials = mutableSetOf<String>()
+        val result = mutableListOf<CertificateInfo>()
+
+        certsList.forEach { certInfo ->
+            val currentAlgo = certInfo.cert?.publicKey?.algorithm
+            val serialNumber = certInfo.cert?.serialNumber?.toString()
+
+            // Identify the Root Certificate (A root is always self-signed: Subject == Issuer)
+            val subjectStr = certInfo.cert?.subjectDN?.toString()
+            val issuerStr = certInfo.cert?.issuerDN?.toString()
+            val isRoot = (subjectStr != null && subjectStr == issuerStr)
+
+            // Display only if serial number hasn't been seen before
+            if (serialNumber == null || !seenSerials.contains(serialNumber)) {
+                if (serialNumber != null) {
+                    seenSerials.add(serialNumber)
+                }
+
+                // With EC certificates present, show EC certificates and the root (even if RSA)
+                if (!containsEc || currentAlgo.equals("EC", ignoreCase = true) ||
+                    currentAlgo.equals("ECDSA", ignoreCase = true) || isRoot) {
+                    result.add(certInfo)
+                }
+            }
+        }
+        return result
+    }
+
     private fun addCertificateChain(baseData: BaseData) {
         var id = ID_CERT_INFO_START
         if (baseData.status != RootPublicKey.Status.NULL) {
@@ -128,44 +161,8 @@ class HomeAdapter(listener: Listener) : IdBasedRecyclerViewAdapter() {
                 R.string.cert_chain_description), id++)
         }
 
-        val certsList = baseData.certs
-        if (!certsList.isNullOrEmpty()) {
-            val containsEc = certsList.any { it.cert?.publicKey?.algorithm?.equals("EC", ignoreCase = true) == true || it.cert?.publicKey?.algorithm?.equals("ECDSA", ignoreCase = true) == true }
-
-            // Track unique serial numbers to block duplicates
-            val seenSerials = mutableSetOf<String>()
-
-            certsList.forEach { certInfo ->
-                val currentAlgo = certInfo.cert?.publicKey?.algorithm
-                val serialNumber = certInfo.cert?.serialNumber?.toString()
-
-                // Identify the Root Certificate (A root is always self-signed: Subject == Issuer)
-                val subjectStr = certInfo.cert?.subjectDN?.toString()
-                val issuerStr = certInfo.cert?.issuerDN?.toString()
-                val isRoot = (subjectStr != null && subjectStr == issuerStr)
-
-                // Display only if serial number hasn't been seen before
-                if (serialNumber == null || !seenSerials.contains(serialNumber)) {
-
-                    if (serialNumber != null) {
-                        seenSerials.add(serialNumber)
-                    }
-
-                    if (containsEc) {
-                        // 1. Show EC certificates and Root certificate (even if Root is RSA)
-                        if (currentAlgo.equals("EC", ignoreCase = true) || currentAlgo.equals("ECDSA", ignoreCase = true) || isRoot) {
-                            addItem(CommonItemViewHolder.CERT_INFO_CREATOR, certInfo, id++)
-                        }
-                    } else {
-                        // 2. Show RSA certificates (duplicates are blocked)
-                        addItem(CommonItemViewHolder.CERT_INFO_CREATOR, certInfo, id++)
-                    }
-                }
-            }
-        } else {
-            baseData.certs.forEach { certInfo ->
-                addItem(CommonItemViewHolder.CERT_INFO_CREATOR, certInfo, id++)
-            }
+        displayedCerts(baseData.certs).forEach { certInfo ->
+            addItem(CommonItemViewHolder.CERT_INFO_CREATOR, certInfo, id++)
         }
 
         // Add revocation list information with source status
@@ -335,21 +332,29 @@ class HomeAdapter(listener: Listener) : IdBasedRecyclerViewAdapter() {
             R.string.attestation_info,
             R.string.attestation_info_description), id++)
 
-        val cert = attestationData.certs?.firstOrNull { it.attestation === attestation }?.cert
         val secretMode = AppApplication.app.getSharedPreferences("settings", Context.MODE_PRIVATE)
-            .getBoolean("secret_mode", true)
-        val validity = when {
-            cert == null -> null
-            secretMode -> context.getString(R.string.info_hidden_secret_mode)
-            else -> context.getString(R.string.cert_not_before) +
-                    AuthorizationList.formatDate(cert.notBefore) + "\n" +
-                    context.getString(R.string.cert_not_after) +
-                    AuthorizationList.formatDate(cert.notAfter)
+            .getBoolean("secret_mode", false)
+        displayedCerts(attestationData.certs).forEach { info ->
+            val cert = info.cert
+            val role = when {
+                info.attestation === attestation -> R.string.info_validity_leaf
+                cert.subjectDN.toString() == cert.issuerDN.toString() -> R.string.info_validity_root
+                else -> R.string.info_validity_intermediate
+            }
+            val validity = if (secretMode) {
+                context.getString(R.string.info_hidden_secret_mode)
+            } else {
+                context.getString(R.string.cert_not_before) +
+                        AuthorizationList.formatDate(cert.notBefore) + "\n" +
+                        context.getString(R.string.cert_not_after) +
+                        AuthorizationList.formatDate(cert.notAfter)
+            }
+            addItem(CommonItemViewHolder.INFO_ITEM_CREATOR, AttestationInfoData(
+                R.string.info_validity,
+                R.string.info_validity_description,
+                validity,
+                titleText = context.getString(role)), id++)
         }
-        addItem(CommonItemViewHolder.INFO_ITEM_CREATOR, AttestationInfoData(
-            R.string.info_validity,
-            R.string.info_validity_description,
-            validity), id++)
 
         val patchTitles = intArrayOf(
             R.string.authorization_list_osPatchLevel,
@@ -394,7 +399,7 @@ class HomeAdapter(listener: Listener) : IdBasedRecyclerViewAdapter() {
         addItem(CommonItemViewHolder.INFO_ITEM_CREATOR, AttestationInfoData(
             R.string.authorization_list_rootOfTrust,
             R.string.authorization_list_rootOfTrust_description,
-            rootOfTrust?.toStringWithoutHash(), rootEnforced), id++)
+            rootOfTrust?.toStringWithoutHash(), rootEnforced, monospace = true), id++)
 
         val manufacturer = pick(R.string.authorization_list_attestationIdManufacturer)
         addItem(CommonItemViewHolder.INFO_ITEM_CREATOR, AttestationInfoData(
