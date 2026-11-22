@@ -25,7 +25,17 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      - name: Restore signing keystore
+        run: |
+          printf '%s' "${{ secrets.MEOW }}" | base64 --decode > meow-keyattestation.jks
+          chmod 600 meow-keyattestation.jks
+
       - name: Build APKs
+        env:
+          KEYSTORE_FILE: ${{ github.workspace }}/meow-keyattestation.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew assembleDebug assembleRelease
 
       - name: Rename APKs
