@@ -36,7 +36,7 @@ android {
         minSdk = 24
         targetSdk = 35
         versionCode = gitCommitCount
-        versionName = '2.0.4'
+        versionName = '1.0 meow'
         resourceConfigurations += supportedLocales
         optimization {
             keepRules {
@@ -54,23 +54,18 @@ android {
                 keyPassword properties.getProperty("keyPassword")
             }
         }
-        release {
-            def sFile = System.getenv("STORE_FILE") ?: properties.getProperty("storeFile") ?: "Vision.jks"
-            storeFile file(sFile)
-            storePassword System.getenv("STORE_PASSWORD") ?: properties.getProperty("storePassword")
-            keyAlias System.getenv("KEY_ALIAS") ?: properties.getProperty("keyAlias")
-            keyPassword System.getenv("KEY_PASSWORD") ?: properties.getProperty("keyPassword")
-        }
     }
+
     buildTypes {
         debug {
             versionNameSuffix '-debug'
         }
+
         release {
             minifyEnabled true
             shrinkResources true
             vcsInfo.include false
-            signingConfig signingConfigs.release
+            signingConfig signingConfigs.debug
             proguardFiles 'proguard-rules.pro'
         }
     }
@@ -79,6 +74,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
+
     kotlinOptions {
         jvmTarget = "21"
         options.languageVersion = KotlinVersion.KOTLIN_2_1
