@@ -400,9 +400,13 @@
     The most relevant values of the attestation at a glance. They are read from the attestation certificate and its extension; tap an item for details.
     ]]></string>
     <string name="info_validity">Validity period</string>
+    <string name="info_validity_leaf">Validity · attestation certificate</string>
+    <string name="info_validity_intermediate">Validity · intermediate certificate</string>
+    <string name="info_validity_root">Validity · root certificate</string>
     <string name="info_validity_description"><![CDATA[
-    The period during which the attestation certificate is valid, taken from the validity field of the certificate that carries this attestation.
+    The period during which each certificate of the chain is valid, taken from the validity field of the certificate. Every certificate in the chain must be valid for the attestation to be trusted.
     ]]></string>
+    <string name="copied_to_clipboard">Copied to clipboard</string>
     <string name="info_patch_levels">Patch levels</string>
     <string name="info_patch_levels_description"><![CDATA[
     The security patch levels reported by the attestation for the operating system, the vendor image and the boot image.
@@ -410,7 +414,6 @@
     <string name="info_verified_boot_hash">Verified boot hash</string>
     <string name="info_verified_boot_hash_description"><![CDATA[
     A digest of all data protected by Verified Boot.
-    ]]></string>
     <string name="info_not_available">Not available</string>
     <string name="info_hidden_secret_mode">Hidden (Secret Mode is on)</string>
 </resources>
