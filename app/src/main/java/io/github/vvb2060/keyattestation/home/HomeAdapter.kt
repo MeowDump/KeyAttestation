@@ -1,9 +1,13 @@
 package io.github.vvb2060.keyattestation.home
 
+import android.content.Context
+import android.content.res.Configuration
 import android.hardware.security.keymint.RpcHardwareInfo
 import android.util.Base64
 import android.util.Pair
+import androidx.appcompat.app.AppCompatDelegate
 import com.google.common.io.BaseEncoding
+import io.github.vvb2060.keyattestation.AppApplication
 import io.github.vvb2060.keyattestation.R
 import io.github.vvb2060.keyattestation.attestation.*
 import io.github.vvb2060.keyattestation.lang.AttestationException
@@ -88,10 +92,41 @@ class HomeAdapter(listener: Listener) : IdBasedRecyclerViewAdapter() {
             }
         }
 
+        when (baseData) {
+            is AttestationData -> updateData(baseData)
+            is RemoteProvisioningData -> updateData(baseData)
+            is KeyboxData -> {}
+        }
+
+        addCertificateChain(baseData)
+
+        notifyDataSetChanged()
+    }
+
+    fun reset() {
+        clear()
+        notifyDataSetChanged()
+    }
+
+    private fun localizedContext(): Context {
+        val app = AppApplication.app
+        val locales = AppCompatDelegate.getApplicationLocales()
+        return if (!locales.isEmpty) {
+            val config = Configuration(app.resources.configuration)
+            config.setLocale(locales[0])
+            app.createConfigurationContext(config)
+        } else {
+            app
+        }
+    }
+
+    private fun addCertificateChain(baseData: BaseData) {
         var id = ID_CERT_INFO_START
-        addItem(SubtitleViewHolder.CREATOR, CommonData(
-            R.string.cert_chain,
-            R.string.cert_chain_description), id++)
+        if (baseData.status != RootPublicKey.Status.NULL) {
+            addItem(SubtitleViewHolder.CREATOR, CommonData(
+                R.string.cert_chain,
+                R.string.cert_chain_description), id++)
+        }
 
         val certsList = baseData.certs
         if (!certsList.isNullOrEmpty()) {
@@ -136,20 +171,12 @@ class HomeAdapter(listener: Listener) : IdBasedRecyclerViewAdapter() {
         // Add revocation list information with source status
         val publishTime = io.github.vvb2060.keyattestation.attestation.RevocationList.getPublishTime()
         val source = io.github.vvb2060.keyattestation.attestation.RevocationList.getCurrentSource()
-        val app = io.github.vvb2060.keyattestation.AppApplication.app
 
         val dateStr = publishTime?.let {
             io.github.vvb2060.keyattestation.attestation.AuthorizationList.formatDate(it)
         } ?: ""
 
-        val locales = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()
-        val context = if (!locales.isEmpty) {
-            val config = android.content.res.Configuration(app.resources.configuration)
-            config.setLocale(locales[0])
-            app.createConfigurationContext(config)
-        } else {
-            app
-        }
+        val context = localizedContext()
 
         val statusLine = when (source) {
             RevocationList.DataSource.NETWORK_INITIAL -> context.getString(R.string.revocation_status_initial)
@@ -170,37 +197,33 @@ class HomeAdapter(listener: Listener) : IdBasedRecyclerViewAdapter() {
             R.string.revocation_list_publish_time,
             R.string.revocation_list_description,
             dateDisplay), ID_REVOCATION_INFO)
-
-        when (baseData) {
-            is AttestationData -> updateData(baseData)
-            is RemoteProvisioningData -> updateData(baseData)
-            is KeyboxData -> {}
-        }
-
-        notifyDataSetChanged()
     }
 
     private fun updateData(attestationData: AttestationData) {
-        addItemAt(1, BootStateViewHolder.CREATOR, attestationData, ID_BOOT_STATUS)
+        addItem(BootStateViewHolder.CREATOR, attestationData, ID_BOOT_STATUS)
 
         var id = ID_DESCRIPTION_START
         val attestation = attestationData.showAttestation ?: return
 
+        if (attestationData.rootOfTrust?.isVerifiedBootKeySuspicious == true) {
+            addItem(HeaderViewHolder.CREATOR, HeaderData(
+                R.string.verified_boot_key_suspicious,
+                R.string.verified_boot_key_suspicious_summary,
+                R.drawable.ic_error_outline_24,
+                rikka.material.R.attr.colorAlert), ID_BOOT_KEY_STATUS)
+        }
+
         if (attestationData.isSoftwareLevel) {
-            addItemAt(2, HeaderViewHolder.CREATOR, HeaderData(
+            addItem(HeaderViewHolder.CREATOR, HeaderData(
                 R.string.software_attestation,
                 R.string.software_attestation_summary,
                 R.drawable.ic_error_outline_24,
                 rikka.material.R.attr.colorWarning), ID_SOFTWARE_STATUS)
         }
 
-        if (attestationData.rootOfTrust?.isVerifiedBootKeySuspicious == true) {
-            addItemAt(2, HeaderViewHolder.CREATOR, HeaderData(
-                R.string.verified_boot_key_suspicious,
-                R.string.verified_boot_key_suspicious_summary,
-                R.drawable.ic_error_outline_24,
-                rikka.material.R.attr.colorAlert), ID_BOOT_KEY_STATUS)
-        }
+        val tee = createAuthorizationItems(attestation.teeEnforced)
+        val sw = createAuthorizationItems(attestation.softwareEnforced)
+        val consolidated = addAttestationInfo(attestationData, attestation, tee, sw)
 
         addItem(CommonItemViewHolder.SECURITY_LEVEL_CREATOR, SecurityLevelData(
             R.string.attestation,
@@ -235,12 +258,13 @@ class HomeAdapter(listener: Listener) : IdBasedRecyclerViewAdapter() {
             R.string.authorization_list,
             R.string.authorization_list_description), id++)
 
-        val tee = createAuthorizationItems(attestation.teeEnforced)
-        val sw = createAuthorizationItems(attestation.softwareEnforced)
         for (i in tee.indices) {
             val h = tee[i]
             val s = sw[i]
             if (h == null && s == null) {
+                continue
+            }
+            if (i in consolidated) {
                 continue
             }
 
@@ -285,11 +309,112 @@ class HomeAdapter(listener: Listener) : IdBasedRecyclerViewAdapter() {
         }
     }
 
+    private fun addAttestationInfo(
+        attestationData: AttestationData,
+        attestation: Attestation,
+        tee: Array<String?>,
+        sw: Array<String?>
+    ): Set<Int> {
+        val context = localizedContext()
+        val consolidated = mutableSetOf<Int>()
+
+        fun pick(title: Int): kotlin.Pair<String?, Boolean?> {
+            val i = authorizationItemTitles.indexOf(title)
+            val h = tee[i]
+            val s = sw[i]
+            if (h == null || s == null || h == s) consolidated.add(i)
+            return when {
+                h != null -> kotlin.Pair(h, true)
+                s != null -> kotlin.Pair(s, false)
+                else -> kotlin.Pair(null, null)
+            }
+        }
+
+        var id = ID_ATTESTATION_INFO_START
+        addItem(SubtitleViewHolder.CREATOR, CommonData(
+            R.string.attestation_info,
+            R.string.attestation_info_description), id++)
+
+        val cert = attestationData.certs?.firstOrNull { it.attestation === attestation }?.cert
+        val secretMode = AppApplication.app.getSharedPreferences("settings", Context.MODE_PRIVATE)
+            .getBoolean("secret_mode", true)
+        val validity = when {
+            cert == null -> null
+            secretMode -> context.getString(R.string.info_hidden_secret_mode)
+            else -> context.getString(R.string.cert_not_before) +
+                    AuthorizationList.formatDate(cert.notBefore) + "\n" +
+                    context.getString(R.string.cert_not_after) +
+                    AuthorizationList.formatDate(cert.notAfter)
+        }
+        addItem(CommonItemViewHolder.INFO_ITEM_CREATOR, AttestationInfoData(
+            R.string.info_validity,
+            R.string.info_validity_description,
+            validity), id++)
+
+        val patchTitles = intArrayOf(
+            R.string.authorization_list_osPatchLevel,
+            R.string.authorization_list_vendorPatchLevel,
+            R.string.authorization_list_bootPatchLevel)
+        val patchLines = mutableListOf<String>()
+        val patchEnforcement = mutableSetOf<Boolean>()
+        for (title in patchTitles) {
+            val (value, enforced) = pick(title)
+            if (value != null) {
+                patchLines.add(context.getString(title) + ": " + value)
+                patchEnforcement.add(enforced!!)
+            }
+        }
+        if (patchEnforcement.size > 1) {
+            patchTitles.forEach { consolidated.remove(authorizationItemTitles.indexOf(it)) }
+        }
+        addItem(CommonItemViewHolder.INFO_ITEM_CREATOR, AttestationInfoData(
+            R.string.info_patch_levels,
+            R.string.info_patch_levels_description,
+            patchLines.joinToString("\n").ifEmpty { null },
+            patchEnforcement.singleOrNull()), id++)
+
+        val rootOfTrust = attestation.rootOfTrust
+        val rootEnforced = when {
+            attestation.teeEnforced.rootOfTrust != null -> true
+            attestation.softwareEnforced.rootOfTrust != null -> false
+            else -> null
+        }
+        val rootIndex = authorizationItemTitles.indexOf(R.string.authorization_list_rootOfTrust)
+        if (rootOfTrust != null && rootEnforced != null) {
+            val h = tee[rootIndex]
+            val s = sw[rootIndex]
+            if (h == null || s == null || h == s) consolidated.add(rootIndex)
+        }
+        val bootHash = rootOfTrust?.verifiedBootHash?.let { BaseEncoding.base16().lowerCase().encode(it) }
+        addItem(CommonItemViewHolder.INFO_ITEM_CREATOR, AttestationInfoData(
+            R.string.info_verified_boot_hash,
+            R.string.info_verified_boot_hash_description,
+            bootHash, rootEnforced, bootHash, true), id++)
+
+        addItem(CommonItemViewHolder.INFO_ITEM_CREATOR, AttestationInfoData(
+            R.string.authorization_list_rootOfTrust,
+            R.string.authorization_list_rootOfTrust_description,
+            rootOfTrust?.toStringWithoutHash(), rootEnforced), id++)
+
+        val manufacturer = pick(R.string.authorization_list_attestationIdManufacturer)
+        addItem(CommonItemViewHolder.INFO_ITEM_CREATOR, AttestationInfoData(
+            R.string.authorization_list_attestationIdManufacturer,
+            R.string.authorization_list_attestationIdManufacturer_description,
+            manufacturer.first, manufacturer.second), id++)
+
+        val created = pick(R.string.authorization_list_creationDateTime)
+        addItem(CommonItemViewHolder.INFO_ITEM_CREATOR, AttestationInfoData(
+            R.string.authorization_list_creationDateTime,
+            R.string.authorization_list_creationDateTime_description,
+            created.first, created.second), id++)
+
+        return consolidated
+    }
+
     private fun updateData(rkpData: RemoteProvisioningData) {
         if (rkpData.status == RootPublicKey.Status.NULL) {
-            removeItemAt(1)
             var e = AttestationException(CODE_RKP, rkpData.error)
-            addItemAt(1, ErrorViewHolder.CREATOR, e, ID_CERT_INFO_START)
+            addItem(ErrorViewHolder.CREATOR, e, ID_CERT_INFO_START)
         }
 
         if (rkpData.rkpHostname != null) {
@@ -391,8 +516,15 @@ class HomeAdapter(listener: Listener) : IdBasedRecyclerViewAdapter() {
         return if (id < ID_CERT_INFO_START) {
             false
         } else {
-            (getItemId(position + 1) / 1000 - id / 1000) > 0
+            getItemId(position + 1) / 1000 != id / 1000
         }
+    }
+
+    fun allowDividerAfter(position: Int): Boolean {
+        if (position < 0 || position + 1 >= itemCount) return false
+        val id = getItemId(position)
+        return allowFrameAt(position) && id % 1000 != 0L &&
+                getItemId(position + 1) / 1000 == id / 1000
     }
 
     companion object {
@@ -410,6 +542,7 @@ class HomeAdapter(listener: Listener) : IdBasedRecyclerViewAdapter() {
         private const val ID_AUTHORIZATION_LIST_START = 4000L
         private const val ID_KNOX_START = 5000L
         private const val ID_RKP_DICE_START = 6000L
+        private const val ID_ATTESTATION_INFO_START = 7000L
         private const val ID_ERROR_MESSAGE = 100000L
 
         private fun eekCurveToString(curve: Int): String {
