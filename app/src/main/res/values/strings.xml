@@ -414,6 +414,7 @@
     <string name="info_verified_boot_hash">Verified boot hash</string>
     <string name="info_verified_boot_hash_description"><![CDATA[
     A digest of all data protected by Verified Boot.
+    ]]></string>
     <string name="info_not_available">Not available</string>
     <string name="info_hidden_secret_mode">Hidden (Secret Mode is on)</string>
 </resources>
