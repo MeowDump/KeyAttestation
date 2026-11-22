@@ -13,19 +13,28 @@
         <!--<item name="android:background">?outlineButtonBackground</item>-->
     </style>
 
+    <style name="HomeRowStyle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingStart">@dimen/home_row_inset</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingEnd">@dimen/home_row_inset</item>
+        <item name="android:paddingBottom">12dp</item>
+    </style>
+
     <style name="HomeItemTitleText">
-        <item name="android:textSize">16sp</item>
+        <item name="android:textSize">13sp</item>
         <item name="android:gravity">center_vertical</item>
         <item name="android:textAppearance">?textAppearanceSubtitle2</item>
-        <item name="android:textColor">@color/material_on_surface_emphasis_high_type</item>
+        <item name="android:textColor">@color/material_on_surface_emphasis_medium</item>
     </style>
 
     <style name="HomeItemSummaryText">
-        <item name="android:textSize">14sp</item>
+        <item name="android:textSize">15sp</item>
         <item name="android:gravity">center_vertical</item>
         <item name="android:textAppearance">?textAppearanceBody2</item>
-        <item name="android:textColor">@color/material_on_surface_emphasis_medium</item>
-        <item name="android:lineSpacingExtra">1sp</item>
+        <item name="android:textColor">@color/material_on_surface_emphasis_high_type</item>
+        <item name="android:lineSpacingExtra">2sp</item>
     </style>
 
 </resources>
