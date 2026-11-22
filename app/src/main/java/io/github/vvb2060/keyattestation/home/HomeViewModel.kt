@@ -45,7 +45,7 @@ class HomeViewModel(
     private val attestationRepository = AttestationRepository()
     private val attestationData = MutableLiveData<Resource<BaseData>>()
 
-    var secretMode = sp.getBoolean("secret_mode", true)
+    var secretMode = sp.getBoolean("secret_mode", false)
         set(value) {
             field = value
             sp.edit { putBoolean("secret_mode", value) }
@@ -53,7 +53,7 @@ class HomeViewModel(
 
     val hasStrongBox = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
             pm.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
-    var preferStrongBox = sp.getBoolean("prefer_strongbox", false)
+    var preferStrongBox = sp.getBoolean("prefer_strongbox", true)
         set(value) {
             field = value
             sp.edit { putBoolean("prefer_strongbox", value) }
@@ -61,7 +61,7 @@ class HomeViewModel(
 
     val hasAttestKey = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
             pm.hasSystemFeature(PackageManager.FEATURE_KEYSTORE_APP_ATTEST_KEY)
-    var preferAttestKey = sp.getBoolean("prefer_attest_key", false)
+    var preferAttestKey = sp.getBoolean("prefer_attest_key", true)
         set(value) {
             field = value
             sp.edit { putBoolean("prefer_attest_key", value) }
@@ -69,7 +69,7 @@ class HomeViewModel(
 
     val hasDeviceIds = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
             pm.hasSystemFeature("android.software.device_id_attestation")
-    var preferIncludeProps = sp.getBoolean("prefer_include_props", false)
+    var preferIncludeProps = sp.getBoolean("prefer_include_props", true)
         set(value) {
             field = value
             sp.edit { putBoolean("prefer_include_props", value) }
@@ -95,7 +95,7 @@ class HomeViewModel(
         }
 
     val hasMEID = pm.hasSystemFeature(PackageManager.FEATURE_TELEPHONY_CDMA)
-    var preferIdAttestationMEID = sp.getBoolean("prefer_id_attestation_MEID", false)
+    var preferIdAttestationMEID = sp.getBoolean("prefer_id_attestation_MEID", true)
         set(value) {
             field = value
             sp.edit { putBoolean("prefer_id_attestation_MEID", value) }
