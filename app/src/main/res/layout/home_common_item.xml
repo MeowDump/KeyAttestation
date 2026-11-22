@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@android:id/content"
-    style="@style/HomeCardStyle"
+    style="@style/HomeRowStyle"
     android:background="?android:selectableItemBackground"
     android:gravity="center_vertical"
     android:orientation="horizontal">
