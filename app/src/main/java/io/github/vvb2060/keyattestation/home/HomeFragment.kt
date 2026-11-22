@@ -1,6 +1,7 @@
 package io.github.vvb2060.keyattestation.home
 
 import android.app.Dialog
+import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.text.method.LinkMovementMethod
@@ -133,6 +134,7 @@ class HomeFragment : AppFragment(), HomeAdapter.Listener, MenuProvider {
                 }
 
                 Status.LOADING -> {
+                    adapter.reset()
                     binding.progress.isVisible = true
                     binding.list.isVisible = false
                 }
@@ -185,40 +187,19 @@ class HomeFragment : AppFragment(), HomeAdapter.Listener, MenuProvider {
             return
         }
 		
-		if (data is AuthorizationItemData && data.data.contains("verifiedBootHash:")) {
-            val dialog = AlertDialog.Builder(context)
-                .setTitle(data.title)
-                .setMessage(data.getMessage(context))
-                .setNeutralButton(R.string.copy_verifiedBootHash) { _, _ ->
-                    val lines = data.data.lines()
-                    for (line in lines) {
-                        if (line.startsWith("verifiedBootHash:")) {
-                            val verifiedBootHash = line.substringAfter(":").trim()
-                            val clipboardManager =
-                                context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                            clipboardManager.setPrimaryClip(
-                                android.content.ClipData.newPlainText(
-                                    "verifiedBootHash",
-                                    verifiedBootHash
-                                )
-                            )
-                            AppApplication.toast(getString(R.string.copied_verifiedBootHash_to_clipboard))
-                            break
-                        }
-                    }
-                }
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
-
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.apply {
-                isAllCaps = false
-                textSize = 13f
-            }
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.apply {
-                isAllCaps = false
-                textSize = 13f
-            }
+        if (data is AttestationInfoData && data.copyData != null) {
+            showCopyHashDialog(context, data, data.copyData)
             return
+        }
+
+        if (data is AuthorizationItemData && data.data.contains("verifiedBootHash:")) {
+            val hash = data.data.lines()
+                .firstOrNull { it.startsWith("verifiedBootHash:") }
+                ?.substringAfter(":")?.trim()
+            if (hash != null) {
+                showCopyHashDialog(context, data, hash)
+                return
+            }
         }
 
         AlertDialogFragment.Builder(context)
@@ -227,6 +208,26 @@ class HomeFragment : AppFragment(), HomeAdapter.Listener, MenuProvider {
             .positiveButton(android.R.string.ok)
             .build()
             .show(context.supportFragmentManager)
+    }
+
+    private fun showCopyHashDialog(context: Context, data: Data, hash: String) {
+        val dialog = AlertDialog.Builder(context)
+            .setTitle(data.title)
+            .setMessage(data.getMessage(context))
+            .setNeutralButton(R.string.copy_verifiedBootHash) { _, _ ->
+                CommonItemViewHolder.copyHashToClipboard(context, hash)
+            }
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.apply {
+            isAllCaps = false
+            textSize = 13f
+        }
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.apply {
+            isAllCaps = false
+            textSize = 13f
+        }
     }
 
     override fun onPrepareMenu(menu: Menu) {
