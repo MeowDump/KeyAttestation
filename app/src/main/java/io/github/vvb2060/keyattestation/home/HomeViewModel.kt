@@ -21,6 +21,7 @@ import com.samsung.android.security.keystore.AttestationUtils
 import io.github.vvb2060.keyattestation.AppApplication
 import io.github.vvb2060.keyattestation.keystore.KeyStoreKeyType
 import io.github.vvb2060.keyattestation.keystore.KeyStoreManager
+import io.github.vvb2060.keyattestation.lang.AttestationException
 import io.github.vvb2060.keyattestation.repository.AttestationRepository
 import io.github.vvb2060.keyattestation.repository.BaseData
 import io.github.vvb2060.keyattestation.util.Resource
@@ -174,8 +175,13 @@ class HomeViewModel(
 
         attestationData.postValue(Resource.loading(null))
 
-        val result = cr.openFileDescriptor(uri, "r").use {
-            attestationRepository.loadCerts(it, preferAttestRsaKey)
+        val result = try {
+            cr.openFileDescriptor(uri, "r").use {
+                attestationRepository.loadCerts(it, preferAttestRsaKey)
+            }
+        } catch (e: Exception) {
+            Log.e(AppApplication.TAG, "load: ", e)
+            Resource.error(AttestationException(AttestationException.CODE_UNKNOWN, e), null)
         }
 
         attestationData.postValue(result)
