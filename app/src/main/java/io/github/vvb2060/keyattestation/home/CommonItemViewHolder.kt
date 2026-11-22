@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Typeface
 import android.util.Pair
+import android.util.TypedValue
 import android.view.View
 import android.widget.Toast
 import androidx.core.view.isVisible
@@ -32,6 +33,12 @@ open class CommonItemViewHolder<T>(itemView: View, binding: HomeCommonItemBindin
                 context.getString(R.string.copied_verifiedBootHash_to_clipboard),
                 Toast.LENGTH_SHORT
             ).show()
+        }
+
+        fun copyTextToClipboard(context: Context, text: String) {
+            val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboardManager.setPrimaryClip(ClipData.newPlainText("attestation", text))
+            Toast.makeText(context, context.getString(R.string.copied_to_clipboard), Toast.LENGTH_SHORT).show()
         }
 
         private fun copyVerifiedBootHash(context: Context, dataString: String): Boolean {
@@ -159,12 +166,22 @@ open class CommonItemViewHolder<T>(itemView: View, binding: HomeCommonItemBindin
                         icon.setOnClickListener {
                             data.copyData?.let { copyHashToClipboard(context, it) }
                         }
+                        root.setOnLongClickListener {
+                            val value = data.data
+                            if (value.isNullOrEmpty()) {
+                                false
+                            } else {
+                                copyTextToClipboard(context, value)
+                                true
+                            }
+                        }
                     }
                 }
 
                 override fun onBind() {
                     binding.apply {
-                        title.setText(data.title)
+                        val titleText = data.titleText
+                        if (titleText != null) title.text = titleText else title.setText(data.title)
                         if (data.data.isNullOrEmpty()) {
                             summary.setText(R.string.info_not_available)
                         } else {
@@ -172,6 +189,7 @@ open class CommonItemViewHolder<T>(itemView: View, binding: HomeCommonItemBindin
                         }
                         summary.typeface =
                             if (data.monospace) Typeface.MONOSPACE else Typeface.DEFAULT
+                        summary.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (data.monospace) 13f else 15f)
 
                         val tee = data.tee
                         text1.isVisible = tee != null
@@ -296,7 +314,7 @@ open class CommonItemViewHolder<T>(itemView: View, binding: HomeCommonItemBindin
 
                     val secretMode =
                         AppApplication.app.getSharedPreferences("settings", Context.MODE_PRIVATE)
-                            .getBoolean("secret_mode", true)
+                            .getBoolean("secret_mode", false)
 
                     val sb = StringBuilder()
                     val cert = data.cert
