@@ -3,6 +3,7 @@ package io.github.vvb2060.keyattestation.home
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.Typeface
 import android.util.Pair
 import android.view.View
 import android.widget.Toast
@@ -23,25 +24,23 @@ open class CommonItemViewHolder<T>(itemView: View, binding: HomeCommonItemBindin
     HomeViewHolder<T, HomeCommonItemBinding>(itemView, binding) {
 
     companion object {
+        fun copyHashToClipboard(context: Context, verifiedBootHash: String) {
+            val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboardManager.setPrimaryClip(ClipData.newPlainText("verifiedBootHash", verifiedBootHash))
+            Toast.makeText(
+                context,
+                context.getString(R.string.copied_verifiedBootHash_to_clipboard),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+
         private fun copyVerifiedBootHash(context: Context, dataString: String): Boolean {
             if (!dataString.contains("verifiedBootHash:")) return false
             
             val lines = dataString.lines()
             for (line in lines) {
                 if (line.startsWith("verifiedBootHash:")) {
-                    val verifiedBootHash = line.substringAfter(":").trim()
-                    
-                    val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                    clipboardManager.setPrimaryClip(
-                        android.content.ClipData.newPlainText("verifiedBootHash", verifiedBootHash)
-                    )
-                    
-                    android.widget.Toast.makeText(
-                        context,
-                        context.getString(R.string.copied_verifiedBootHash_to_clipboard),
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
-                    
+                    copyHashToClipboard(context, line.substringAfter(":").trim())
                     return true // Indicates the long-press was consumed
                 }
             }
@@ -142,6 +141,51 @@ open class CommonItemViewHolder<T>(itemView: View, binding: HomeCommonItemBindin
                             summary.setText(R.string.empty)
                         } else {
                             summary.text = data.data
+                        }
+                    }
+                }
+            }
+        }
+
+        val INFO_ITEM_CREATOR = Creator<AttestationInfoData> { inflater, parent ->
+            val binding = HomeCommonItemBinding.inflate(inflater, parent, false)
+            object : CommonItemViewHolder<AttestationInfoData>(binding.root, binding) {
+
+                init {
+                    this.binding.apply {
+                        root.setOnClickListener {
+                            listener.onCommonDataClick(data)
+                        }
+                        icon.setOnClickListener {
+                            data.copyData?.let { copyHashToClipboard(context, it) }
+                        }
+                    }
+                }
+
+                override fun onBind() {
+                    binding.apply {
+                        title.setText(data.title)
+                        if (data.data.isNullOrEmpty()) {
+                            summary.setText(R.string.info_not_available)
+                        } else {
+                            summary.text = data.data
+                        }
+                        summary.typeface =
+                            if (data.monospace) Typeface.MONOSPACE else Typeface.DEFAULT
+
+                        val tee = data.tee
+                        text1.isVisible = tee != null
+                        if (tee != null) {
+                            text1.setText(if (tee) R.string.tee_enforced else R.string.sw_enforced)
+                        }
+
+                        val copyable = data.copyData != null
+                        icon.isVisible = copyable
+                        if (copyable) {
+                            icon.setImageResource(R.drawable.ic_content_copy_24)
+                            icon.contentDescription =
+                                context.getString(R.string.copy_verifiedBootHash)
+                            icon.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
                         }
                     }
                 }
