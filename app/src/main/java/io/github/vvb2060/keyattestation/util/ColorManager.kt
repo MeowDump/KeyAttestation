@@ -18,12 +18,6 @@ object ColorManager {
             add(R.string.color_default_gray to R.style.Theme_Default_Gray)
             add(R.string.color_original to R.style.Theme_Original)
             add(R.string.color_pure_black to R.style.Theme_Pure_Black)
-            add(R.string.color_blue to R.style.Theme_Blue)
-            add(R.string.color_green to R.style.Theme_Green)
-            add(R.string.color_orange to R.style.Theme_Orange)
-            add(R.string.color_pink to R.style.Theme_Pink)
-            add(R.string.color_purple to R.style.Theme_Purple)
-            add(R.string.color_red to R.style.Theme_Red)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 add(R.string.color_dynamic to R.style.Theme_Dynamic)
             }
@@ -57,6 +51,11 @@ object ColorManager {
     @StyleRes
     fun getThemeResId(context: Context): Int {
         val prefs = getSharedPreferences(context)
-        return prefs.getInt(KEY_THEME, R.style.Theme_Default_Gray)
+        val saved = prefs.getInt(KEY_THEME, R.style.Theme_Default_Gray)
+        val supported = saved == R.style.Theme_Default_Gray ||
+                saved == R.style.Theme_Original ||
+                saved == R.style.Theme_Pure_Black ||
+                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && saved == R.style.Theme_Dynamic)
+        return if (supported) saved else R.style.Theme_Default_Gray
     }
 }
