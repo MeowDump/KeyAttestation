@@ -29,14 +29,14 @@ def localesFile = file("locales.txt")
 def supportedLocales = localesFile.readLines().findAll { it && !it.startsWith("#") }
 
 android {
-    compileSdk = 35
+    compileSdk = 37
     buildToolsVersion = '35.0.1'
     namespace = 'io.github.vvb2060.keyattestation'
     defaultConfig {
-        minSdk = 24
-        targetSdk = 35
+        minSdk = 29
+        targetSdk = 37
         versionCode = gitCommitCount
-        versionName = '1.0 meow'
+        versionName = 'v1.0 forked by 𝗠𝗘𝗢𝗪𝗻𝗮 💅'
         resourceConfigurations += supportedLocales
         optimization {
             keepRules {
